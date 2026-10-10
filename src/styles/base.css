@@ -1,0 +1,5 @@
+/* The client site sets html/body font-size to 10px so that 1rem = 10px. Same here. */
+html, body { font-size: 10px; margin: 0; padding: 0; background: #fff; -webkit-text-size-adjust: 100%; }
+body { font-family: "Noto Sans JP", sans-serif; color: #000; line-height: 1; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
