@@ -7,10 +7,12 @@ Vinsight（モニター／アンケートサイト）のリプレイス・デモ
 
 ```bash
 npm install      # 初回のみ（node_modules は同梱済み）
-npm run dev      # http://localhost:3000
+npm run dev      # ビルドしてから起動します（初回は約1分）。 http://localhost:3000
 ```
 
-本番ビルド：`npm run build && npm start`
+`npm run dev` は **本番モード**（`next build && next start`）で起動します。メニューを素早く何度クリックしても固まらず、画面遷移が即座に行われます。
+（開発用のホットリロード版 `next dev` は、各ページの初回表示ごとにコンパイルが走るため、クリック直後に反応しないことがあります。ソースを編集するときだけ `npm run dev:hot` を使ってください。）
+コードを変更した後は、起動中のサーバーを止めて（Ctrl+C）`npm run dev` を再実行してください。
 
 ## デモ用ログイン
 

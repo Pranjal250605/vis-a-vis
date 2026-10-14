@@ -1,11 +1,13 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Row } from "@/components/ui";
 import { api, ApiClientError } from "@/lib/client";
 
 export default function AdminLogin() {
   const router = useRouter();
+  // すでにログイン済みなら管理画面TOPへ
+  useEffect(() => { api<{ admin: boolean }>("/auth/me").then((m) => { if (m.admin) router.replace("/admin"); }).catch(() => {}); }, [router]);
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");

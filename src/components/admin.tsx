@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, useApi } from "@/lib/client";
+import { ADMIN_ROUTES, warmRoutes } from "@/lib/warmup";
+import NavProgress from "./NavProgress";
 
 const ICON: Record<string, string> = {
   home: "M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
@@ -40,6 +42,13 @@ const NAV: { grp: string; title: string; isNew?: boolean; items: { href: string;
 
 type ToastItem = { id: number; text: string; kind: "ok" | "err" | "info" };
 
+/** URLのクエリ（?status=… / ?edit=1 / ?tab=… など）が変わったらページを作り直す。
+ *  同じパスでクエリだけ違うリンク（ダッシュボード→一覧、一覧の「編集」リンクなど）が正しく反映される。 */
+function QueryKeyed({ children }: { children: ReactNode }) {
+  const sp = useSearchParams();
+  return <div key={sp.toString()} style={{ display: "contents" }}>{children}</div>;
+}
+
 export function AdminShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const router = useRouter();
@@ -49,6 +58,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const seq = useRef(0);
 
+  useEffect(() => { warmRoutes(ADMIN_ROUTES); }, []); // dev: 全ページを先にコンパイルしておく（クリック直後に固まって見えるのを防ぐ）
   useEffect(() => { if (dash.error?.status === 401) router.replace("/admin/login"); }, [dash.error, router]);
   useEffect(() => { setDrawer(false); window.scrollTo({ top: 0 }); }, [path]);
   useEffect(() => {
@@ -83,6 +93,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className={"adm" + (drawer ? " drawer-open" : "")}>
+      <NavProgress color="linear-gradient(90deg,#fcc800,#ff8900)" />
       <button className="adm-burger" aria-label="メニュー" aria-expanded={drawer} onClick={() => setDrawer(!drawer)}><span /><span /><span /></button>
       <div className="adm-scrim" onClick={() => setDrawer(false)} />
       <aside className="adm-side">
@@ -94,7 +105,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <ul>
                 {g.items.map((it) => (
                   <li key={it.href}>
-                    <Link href={it.href} className={isOn(it.href) && !(it.href === "/admin/points" && path.startsWith("/admin/points/grant")) ? "on" : ""} aria-current={isOn(it.href) ? "page" : undefined}>
+                    <Link href={it.href} onClick={() => setDrawer(false)} className={isOn(it.href) && !(it.href === "/admin/points" && path.startsWith("/admin/points/grant")) ? "on" : ""} aria-current={isOn(it.href) ? "page" : undefined}>
                       <Icon n={it.icon} s={17} />
                       <span className="t">{it.label}</span>
                       {it.code && <span className="cd jost">{it.code}</span>}
@@ -110,10 +121,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <div className="me"><span className="av">A</span><span>admin<small>管理者</small></span></div>
           <button onClick={reset}>データ初期化</button>
           <button onClick={logout}>ログアウト</button>
-          <Link href="/" className="to-site">モニターサイトを開く →</Link>
+          {/* サイトと管理画面はCSSが別なので、ページを読み込み直して移動する（通常の <a>） */}<a href="/" className="to-site">モニターサイトを開く →</a>
         </div>
       </aside>
-      <div className="adm-main" key={path}>{children}</div>
+      <div className="adm-main" key={path}><Suspense fallback={null}><QueryKeyed>{children}</QueryKeyed></Suspense></div>
       <div className="adm-toasts" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={"adm-toast _" + t.kind} role="status">

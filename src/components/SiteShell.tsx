@@ -3,6 +3,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { api } from "@/lib/client";
+import { SITE_ROUTES, warmRoutes } from "@/lib/warmup";
+import NavProgress from "./NavProgress";
 import { Logo } from "./ui";
 
 type Me = { monitor: { id: number; name: string } | null; admin: boolean };
@@ -15,6 +17,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
 
   useEffect(() => { api<Me>("/auth/me").then(setMe).catch(() => setMe({ monitor: null, admin: false })); }, [path]);
   useEffect(() => { setOpen(false); }, [path]);
+  useEffect(() => { warmRoutes([...SITE_ROUTES, "/admin/login"]); }, []); // dev: 全ページを先にコンパイルしておく
 
   // header hides on scroll down and returns on scroll up (like the client's header: is-hidden / is-show)
   const [hidden, setHidden] = useState(false);
@@ -39,6 +42,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="site">
+      <NavProgress />
       <header className={"s-header" + (hidden && !open ? " is-hidden" : "") + (scrolled ? " is-scrolled" : "")}>
         <div className="h-inner">
           <Logo href={me?.monitor ? "/mypage" : "/"} />
@@ -79,18 +83,21 @@ export function SiteShell({ children }: { children: ReactNode }) {
         <div className="f-conts">
           <div className="cmn-inner" style={{ position: "relative" }}>
             <div className="col">
-              <div className="logo"><Logo href="/" /></div>
+              <div className="logo"><Logo href={me?.monitor ? "/mypage" : "/"} /></div>
               <dl className="def">
-                <div><dt><Link href="/">HOME</Link></dt></div>
-                <div><dt><Link href="/#news">NEWS</Link></dt></div>
-                <div><dt><Link href="/register">REGISTER</Link></dt></div>
-                <div><dt><Link href="/mypage">MY PAGE</Link></dt><dd><Link href="/mypage/trade">POINT EXCHANGE</Link></dd><dd><Link href="/mypage/edit">PROFILE</Link></dd></div>
-                <div><dt><Link href="/contact">CONTACT</Link></dt></div>
+                {/* ログイン中は「/」がマイページへ転送されるため、リンク先をマイページ側に切り替える */}
+                {!me?.monitor && <div><dt><Link href="/">HOME</Link></dt></div>}
+                <div><dt><Link href={me?.monitor ? "/mypage#news" : "/#news"}>NEWS</Link></dt></div>
+                {!me?.monitor && <div><dt><Link href="/register">REGISTER</Link></dt></div>}
+                {me?.monitor
+                  ? <div><dt><Link href="/mypage">MY PAGE</Link></dt><dd><Link href="/mypage/trade">POINT EXCHANGE</Link></dd><dd><Link href="/mypage/edit">PROFILE</Link></dd></div>
+                  : <div><dt><Link href="/#login">LOGIN</Link></dt></div>}
+                <div><dt><Link href={me?.monitor ? "/mypage/contact" : "/contact"}>CONTACT</Link></dt></div>
                 <div><dt><Link href="/privacy">PRIVACY</Link></dt></div>
                 <div><dt><a href="http://www.vis-a-vis.co.jp/bunka/" target="_blank" rel="noopener noreferrer">OPERATOR</a></dt></div>
               </dl>
             </div>
-            <div className="f-link"><Link href="/privacy">個人情報保護方針</Link><a href="http://www.vis-a-vis.co.jp/bunka/" target="_blank" rel="noopener noreferrer">運営団体について</a><Link href="/admin/login">管理者ログイン（デモ）</Link></div>
+            <div className="f-link"><Link href="/privacy">個人情報保護方針</Link><a href="http://www.vis-a-vis.co.jp/bunka/" target="_blank" rel="noopener noreferrer">運営団体について</a>{/* 管理画面はCSSが別なので、ページを読み込み直して移動する（通常の <a>） */}<a href="/admin/login">管理者ログイン（デモ）</a></div>
             <p className="f-copy"><small>&copy; VIS-À-VIS All Rights Reserved. (Vinsight demo)</small></p>
             <div className="f-pagetop"><a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }} aria-label="ページ上部へ">↑</a></div>
           </div>

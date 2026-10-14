@@ -42,7 +42,7 @@ export default function MyPageTop() {
         <img src="/images/staff02.webp" alt="" />
       </div>
 
-      <section>
+      <section id="news" style={{ scrollMarginTop: 96 }}>
         <SectionTitle small en="News" jp="新着情報" />
         {news.length === 0 ? <div className="empty">現在お知らせはありません。</div> : (
           <ul className="mp-news">

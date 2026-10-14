@@ -131,7 +131,13 @@ table.tbl.dense td.acts, table.tbl.dense .btns { white-space: normal; }
   .adm.drawer-open .adm-side { transform: none; box-shadow: 0 0 60px rgba(0, 0, 0, .4); }
   .adm-scrim { display: block; position: fixed; inset: 0; z-index: 50; background: rgba(8, 16, 40, .5); opacity: 0; pointer-events: none; transition: opacity .3s; }
   .adm.drawer-open .adm-scrim { opacity: 1; pointer-events: auto; }
-  .adm-burger { display: grid; place-content: center; gap: 5px; position: fixed; z-index: 40; left: 12px; top: 12px; width: 42px; height: 42px; border: 0; border-radius: 12px; background: var(--navy); cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .25); }
+  /* ドロワーを開いている間はボタンを「×」にして、ドロワーの右上（メニューに重ならない位置）へ移動 */
+  .adm.drawer-open .adm-burger { left: 240px; background: rgba(255, 255, 255, .18); box-shadow: none; }
+  .adm.drawer-open .adm-burger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .adm.drawer-open .adm-burger span:nth-child(2) { opacity: 0; }
+  .adm.drawer-open .adm-burger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .adm-burger span { transition: transform .25s, opacity .2s; }
+  .adm-burger { display: grid; place-content: center; gap: 5px; position: fixed; z-index: 70; left: 12px; top: 12px; width: 42px; height: 42px; border: 0; border-radius: 12px; background: var(--navy); cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .25); }
   .adm-burger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 2px; }
   .adm-top { padding: 14px 14px 14px 66px; flex-wrap: wrap; gap: 10px; position: static; }
   .adm-top h1 { font-size: 1.8rem; }

@@ -148,7 +148,7 @@ export default function Landing() {
                 <div className="demo-note">
                   <b>デモ用ログイン情報</b><br />
                   モニター：<b>demo@vinsight.example</b> ／ <b>monitor123</b>（モニター番号 1001）<br />
-                  管理画面：<Link href="/admin/login" style={{ textDecoration: "underline" }}>/admin/login</Link>（<b>admin</b> ／ <b>admin123</b>）
+                  管理画面：<a href="/admin/login" style={{ textDecoration: "underline" }}>/admin/login</a>（<b>admin</b> ／ <b>admin123</b>）
                   <br /><button type="button" className="btn-sm" style={{ marginTop: 8 }} onClick={() => { setEmail("demo@vinsight.example"); setPassword("monitor123"); }}>入力する</button>
                 </div>
               </div>

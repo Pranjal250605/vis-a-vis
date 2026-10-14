@@ -4,7 +4,8 @@
   "private": true,
   "description": "Vinsight replacement - demo with in-memory dummy data (no database)",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next build && next start",
+    "dev:hot": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit"
