@@ -121,6 +121,12 @@ table.tbl.dense td.acts, table.tbl.dense .btns { white-space: normal; }
 .toplist .sub { grid-column: 1 / -1; font-size: 1.15rem; color: #7a8394; }
 
 /* ----- login ----- */
+/* The login page is not inside .adm, so the colour variables must be defined here too
+   (otherwise var(--navy) is undefined and the button is white text on a transparent background). */
+.login-wrap, .login-wrap * { box-sizing: border-box; }
+.login-wrap { --yellow: #fcc800; --orange: #ff8900; --blue: #4d9df2; --navy: #002c83; --green: #57ba87; --purple: #c598e7; --red: #e8383d; --gray: #f4f2f2; --line: #d6dadf; --ink: #1b1f2a; color: var(--ink); line-height: 1.6; }
+.login-wrap .btn.navy { background: #002c83; border-color: #002c83; color: #fff !important; }
+.login-wrap .btn.navy:hover { background: #fff; color: #002c83 !important; }
 .login-wrap { background: radial-gradient(circle at 12% 18%, rgba(252, 200, 0, .95) 0 90px, transparent 91px), radial-gradient(circle at 88% 84%, rgba(255, 137, 0, .9) 0 120px, transparent 121px), linear-gradient(135deg, #002c83 0 48%, #f3f5f9 48%); }
 .login-card { border-radius: 24px; animation: adm-in .6s ease both; }
 
