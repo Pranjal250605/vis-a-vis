@@ -35,7 +35,11 @@ export default function Landing() {
   const [openNews, setOpenNews] = useState<number | null>(null);
   const news = useApi<{ items: { id: number; date: string; title: string; body: string }[] }>("/public/news");
 
-  useEffect(() => { api<{ monitor: unknown }>("/auth/me").then((m) => { if (m.monitor) router.replace("/mypage"); }).catch(() => {}); }, [router]);
+  const [expired, setExpired] = useState(false);
+  useEffect(() => {
+    setExpired(new URLSearchParams(window.location.search).get("expired") === "1");
+    api<{ monitor: unknown }>("/auth/me").then((m) => { if (m.monitor) router.replace("/mypage"); }).catch(() => {});
+  }, [router]);
 
   const login = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +143,7 @@ export default function Landing() {
               <div className="panel" style={{ height: "100%" }}>
                 <h3>Login<small>登録済みのモニターの方</small></h3>
                 <form className="fm" onSubmit={login} noValidate style={{ marginTop: 22 }}>
+                  {expired && !err && <Alert kind="info">ログインの有効期限が切れました（またはログアウトされました）。お手数ですが、もう一度ログインしてください。</Alert>}
                   {err && <Alert kind="err">{err}</Alert>}
                   <Row label="メールアドレス または モニター番号"><input type="text" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} /></Row>
                   <Row label="パスワード"><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></Row>

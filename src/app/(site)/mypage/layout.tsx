@@ -12,7 +12,7 @@ export default function MypageLayout({ children }: { children: ReactNode }) {
   const path = usePathname();
   const { data, error, reload } = useApi<MyPageData>("/mypage", [path]);
 
-  useEffect(() => { if (error?.status === 401) router.replace("/#login"); }, [error, router]);
+  useEffect(() => { if (error?.status === 401) router.replace("/?expired=1#login"); }, [error, router]);
   if (!data) {
     if (error && error.status !== 401) return <div className="cmn-inner" style={{ padding: "120px 24px" }}>{error.message}</div>;
     return (

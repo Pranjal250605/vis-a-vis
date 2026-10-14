@@ -1,4 +1,5 @@
-import { newToken, getStore } from "./store";
+import { getStore } from "./store";
+import { createSessionToken, readSessionToken, type Session } from "./tokens";
 import type { Monitor } from "@/lib/types";
 
 export class ApiError extends Error {
@@ -37,20 +38,14 @@ export interface Route {
   handler: Handler;
 }
 
-// ---- sessions (in memory) ----
-type Session = { kind: "monitor" | "admin"; monitorId?: number };
-const g = globalThis as unknown as { __vinsightSessions?: Map<string, Session> };
-const sessions = (g.__vinsightSessions ??= new Map<string, Session>());
+// ---- sessions: signed cookie tokens (survive server restarts; see tokens.ts) ----
 export const MONITOR_COOKIE = "vin_m";
 export const ADMIN_COOKIE = "vin_a";
 
-export function createSession(s: Session) {
-  const t = newToken() + newToken();
-  sessions.set(t, s);
-  return t;
-}
-export const destroySession = (t?: string) => { if (t) sessions.delete(t); };
-export const readSession = (t?: string) => (t ? sessions.get(t) : undefined);
+export const createSession = (s: Session) => createSessionToken(s);
+/** ログアウトはブラウザ側のCookie削除で行う（トークン自体はサーバーに保存しない） */
+export const destroySession = (_t?: string) => { void _t; };
+export const readSession = (t?: string) => readSessionToken(t);
 
 export function parseCookies(header: string | null): Record<string, string> {
   const out: Record<string, string> = {};

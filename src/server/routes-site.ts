@@ -8,8 +8,7 @@ import { fillTemplate, getStore, hashPassword, isActiveMember, matchTarget, newT
 import { validatePassword, validateProfile } from "./validate";
 import type { Monitor } from "@/lib/types";
 
-const g = globalThis as unknown as { __vinsightTokens?: { reset: Map<string, number>; captcha: Map<string, string> } };
-const tokens = (g.__vinsightTokens ??= { reset: new Map(), captcha: new Map() });
+import { checkCaptcha, makeCaptchaId, makeResetToken, readResetToken } from "./tokens";
 
 function visibleNews(m: Monitor | null, place: "ログイン前" | "マイページ内") {
   const now = Date.now();
@@ -67,8 +66,7 @@ export const siteRoutes: Route[] = [
       const s = getStore();
       if (!errors.email && s.monitors.some((m) => m.email.toLowerCase() === v.email.toLowerCase() && m.status !== "退会")) errors.email = "このメールアドレスは既に登録されています。";
       if (c.body.agree !== true) errors.agree = "個人情報保護方針への同意が必要です。";
-      if (!tokens.captcha.has(str(c.body.captchaId)) || tokens.captcha.get(str(c.body.captchaId)) !== str(c.body.captcha)) errors.captcha = "画像認証の文字が正しくありません。";
-      tokens.captcha.delete(str(c.body.captchaId));
+      if (!checkCaptcha(c.body.captchaId, c.body.captcha)) errors.captcha = "画像認証の文字が正しくありません。";
       if (Object.keys(errors).length) throw new ApiError(422, "入力内容に誤りがあります。", errors);
       const id = Math.max(...s.monitors.map((m) => m.id)) + 1;
       const token = newToken();
@@ -101,8 +99,7 @@ export const siteRoutes: Route[] = [
       const m = getStore().monitors.find((x) => x.email.toLowerCase() === str(c.body.email).toLowerCase() && x.status === "有効");
       let resetUrl: string | null = null;
       if (m) {
-        const t = newToken();
-        tokens.reset.set(t, m.id);
+        const t = makeResetToken(m.id, m.passwordHash);
         resetUrl = `${c.origin}/password-reset/${t}`;
         sendMail(m.email, "【Vinsight】パスワード再設定", "パスワード再設定メール", fillMonitorMail("passwordReset", m, { reset_url: resetUrl }));
       }
@@ -112,14 +109,14 @@ export const siteRoutes: Route[] = [
   {
     method: "POST", path: "/password-reset/confirm",
     handler: (c) => {
-      const id = tokens.reset.get(str(c.body.token));
-      const m = id ? getStore().monitors.find((x) => x.id === id) : undefined;
-      if (!m) throw new ApiError(404, "再設定URLが無効、または有効期限が切れています。");
+      const t = readResetToken(c.body.token);
+      const m = t ? getStore().monitors.find((x) => x.id === t.id && x.status === "有効") : undefined;
+      // パスワードを変更済みなら、同じURLは使えない（トークンに現在のパスワードの印が入っている）
+      if (!m || !t || m.passwordHash.slice(0, 16) !== t.pw) throw new ApiError(404, "再設定URLが無効、または有効期限が切れています。");
       const errors: Record<string, string> = {};
       validatePassword(str(c.body.password), str(c.body.passwordConfirm), errors);
       if (Object.keys(errors).length) throw new ApiError(422, "入力内容に誤りがあります。", errors);
       m.passwordHash = hashPassword(str(c.body.password));
-      tokens.reset.delete(str(c.body.token));
       return { ok: true };
     },
   },
@@ -129,8 +126,7 @@ export const siteRoutes: Route[] = [
     method: "GET", path: "/captcha",
     handler: () => {
       const text = String(Math.floor(1000 + Math.random() * 9000));
-      const id = newToken();
-      tokens.captcha.set(id, text);
+      const id = makeCaptchaId(text);
       const chars = text.split("").map((ch, i) => `<text x="${12 + i * 24}" y="${30 + (i % 2) * 4}" font-size="${26 + (i % 3) * 2}" font-family="Jost,sans-serif" font-weight="700" fill="#002c83" transform="rotate(${(i % 2 ? 1 : -1) * 8} ${12 + i * 24} 28)">${ch}</text>`).join("");
       const noise = Array.from({ length: 4 }, (_, i) => `<line x1="${5 + i * 5}" y1="${8 + i * 9}" x2="${100 - i * 6}" y2="${38 - i * 7}" stroke="#fcc800" stroke-width="1.5"/>`).join("");
       return { id, svg: `<svg xmlns="http://www.w3.org/2000/svg" width="112" height="46" viewBox="0 0 112 46"><rect width="112" height="46" fill="#f4f2f2"/>${noise}${chars}</svg>` };
@@ -148,8 +144,7 @@ export const siteRoutes: Route[] = [
       if (!name) errors.name = "お名前を入力してください。";
       if (!EMAIL_RE.test(email)) errors.email = "メールアドレスを正しく入力してください。";
       if (!body) errors.body = "お問い合わせ内容を入力してください。";
-      if (!tokens.captcha.has(str(c.body.captchaId)) || tokens.captcha.get(str(c.body.captchaId)) !== str(c.body.captcha)) errors.captcha = "画像認証の文字が正しくありません。";
-      tokens.captcha.delete(str(c.body.captchaId));
+      if (!checkCaptcha(c.body.captchaId, c.body.captcha)) errors.captcha = "画像認証の文字が正しくありません。";
       if (Object.keys(errors).length) throw new ApiError(422, "入力内容に誤りがあります。", errors);
       const s = getStore();
       s.inquiries.unshift({ id: nextId("inquiry"), kind: "非モニター", monitorId: null, name, company: str(c.body.company), email, tel: str(c.body.tel), body, at: new Date().toISOString(), status: "未対応" });
@@ -214,8 +209,7 @@ export const siteRoutes: Route[] = [
       if (tama && !/^0526\d{9}$/.test(tama.cardNo)) errors.cardNo = "たまルンカード番号は「0526」から始まる13桁の半角数字で入力してください。";
       const { v, errors: pe } = validateProfile({ ...m, ...c.body, city: c.body.address1 ?? m.city, street: c.body.address2 ?? m.street, birth: c.body.birth || m.birth, industry: m.industry, jobType: m.jobType, employment: m.employment, gender: m.gender });
       ["name", "postcode", "prefecture", "city", "tel", "email"].forEach((k) => { if (pe[k]) errors[k] = pe[k]; });
-      if (!tokens.captcha.has(str(c.body.captchaId)) || tokens.captcha.get(str(c.body.captchaId)) !== str(c.body.captcha)) errors.captcha = "画像認証の文字が正しくありません。";
-      tokens.captcha.delete(str(c.body.captchaId));
+      if (!checkCaptcha(c.body.captchaId, c.body.captcha)) errors.captcha = "画像認証の文字が正しくありません。";
       if (Object.keys(errors).length) throw new ApiError(422, "入力内容に誤りがあります。", errors);
       const t = {
         id: nextId("trade"), appliedAt: new Date().toISOString(), monitorId: m.id, name: v.name, postcode: v.postcode, prefecture: v.prefecture, address1: v.city,
