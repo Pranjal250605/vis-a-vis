@@ -27,8 +27,6 @@ function Inner() {
             <h2>本登録が完了しました</h2>
             <p>モニター番号は <b className="jost" style={{ fontSize: "2.4rem" }}>{id}</b> です。<br />本登録完了メールをお送りしました。ログインしてアンケートにご回答ください。</p>
             <Pill href="/#login">ログインへ</Pill>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/person01.webp" alt="" />
           </>
         )}
         {state === "ng" && (<div style={{ maxWidth: 560, margin: "0 auto" }}><Alert kind="err">{msg}</Alert><Pill href="/register">新規登録へ</Pill></div>)}

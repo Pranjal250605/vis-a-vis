@@ -38,8 +38,6 @@ export default function MyPageTop() {
             <Link href="/mypage/edit" className="sub">登録情報へ</Link>
           </div>
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/images/staff02.webp" alt="" />
       </div>
 
       <section id="news" style={{ scrollMarginTop: 96 }}>

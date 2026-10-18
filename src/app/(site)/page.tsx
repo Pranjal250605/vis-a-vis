@@ -2,21 +2,26 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Hero from "@/components/Hero";
 import VisitorInquiry from "@/components/VisitorInquiry";
-import { CountUp, Reveal, Skeleton, Wave } from "@/components/fx";
+import { CountUp, Reveal, Skeleton } from "@/components/fx";
 import { Alert, Pill, Row, SectionTitle } from "@/components/ui";
 import { api, ApiClientError, fmtDate, useApi } from "@/lib/client";
 
+const FEATURES = [
+  { no: "01", c: "sun", t: "あなたに合った\nアンケートが届く", d: "年齢・お住まい・関心などの登録情報にあわせて、回答できるアンケートがマイページに届きます。", wide: true },
+  { no: "02", c: "sky", t: "回答するたびに\nポイントがたまる", d: "謝礼ポイントはアンケートごとに設定されています。" },
+  { no: "03", c: "amber", t: "500ポイントから\nギフトに交換", d: "QUOカードPay・Amazonギフト券・たまルンポイント。" },
+  { no: "04", c: "mint", t: "新着情報は\nメールでもお知らせ", d: "サイトを開かなくても、大切なお知らせやアンケートの案内に気づけます。", wide: true },
+];
 const STEPS = [
-  { c: "_1", no: "01", t: "モニター登録", d: "メールアドレスと基本情報を入力して仮登録。届いたメールのURLから本登録を完了します。", img: "person03" },
-  { c: "_2", no: "02", t: "アンケートに回答", d: "あなたの属性に合ったアンケートがマイページに届きます。回答すると謝礼ポイントがたまります。", img: "staff01" },
-  { c: "_3", no: "03", t: "ポイントを交換", d: "たまったポイントは、1口500ポイントからギフトに交換できます。", img: "parfait" },
+  { no: "01", t: "モニター登録", d: "メールアドレスと基本情報を入力して仮登録。届いたメールのURLから本登録を完了します。", cta: { href: "/register", label: "新規登録へ" } },
+  { no: "02", t: "アンケートに回答", d: "あなたの属性に合ったアンケートがマイページに届きます。回答すると、謝礼ポイントがたまります。", cta: { href: "/#login", label: "ログイン" } },
+  { no: "03", t: "ギフトに交換", d: "たまったポイントは、1口500ポイントからギフトに交換できます。", cta: { href: "/#gift", label: "交換できるギフトを見る" } },
 ];
 const GIFTS = [
-  { c: "_1", t: "QUOカードPay", tag: "デジタルギフト", d: "登録メールアドレスにデジタルギフトとして送付されます。" },
-  { c: "_2", t: "Amazonギフト券（eメールタイプ）", tag: "デジタルギフト", d: "登録メールアドレスにデジタルギフトとして送付されます。" },
-  { c: "_3", t: "たまルンポイント", tag: "たまルンカード会員向け", d: "「たまルンカード会員」の方が利用できます。カード番号の入力が必要です。" },
+  { c: "navy", t: "QUOカードPay", tag: "デジタルギフト", d: "登録メールアドレスにデジタルギフトとして送付されます。" },
+  { c: "mint", t: "Amazonギフト券", sub: "eメールタイプ", tag: "デジタルギフト", d: "登録メールアドレスにデジタルギフトとして送付されます。" },
+  { c: "amber", t: "たまルンポイント", tag: "たまルンカード会員向け", d: "「たまルンカード会員」の方が利用できます。カード番号の入力が必要です。" },
 ];
 const FAQ: [string, string][] = [
   ["ポイントは何と交換できますか？", "QUOカードPay、Amazonギフト券（eメールタイプ）、たまルンポイントと交換できます。いずれも1口＝500ポイントです。たまルンポイントは「たまルンカード会員」の方のみご利用いただけます。"],
@@ -26,14 +31,17 @@ const FAQ: [string, string][] = [
   ["退会するとどうなりますか？", "退会すると登録情報がすべて削除され、保有ポイントは失効します。退会後に再登録しても、失効したポイントは再発行できません。"],
 ];
 
+type NewsItem = { id: number; date: string; title: string; body: string };
+
 export default function Landing() {
   const router = useRouter();
+  const [tab, setTab] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [openNews, setOpenNews] = useState<number | null>(null);
-  const news = useApi<{ items: { id: number; date: string; title: string; body: string }[] }>("/public/news");
+  const news = useApi<{ items: NewsItem[] }>("/public/news");
 
   const [expired, setExpired] = useState(false);
   useEffect(() => {
@@ -52,172 +60,156 @@ export default function Landing() {
 
   return (
     <>
-      <Hero marquee="Hello, Vinsight! アンケートに答えて、ポイントをためよう。" />
-
-      <section className="top-beat" id="sec-beat">
-        <i className="shape-dot _y" style={{ width: 70, height: 70, left: "6%", top: 70 }} />
-        <i className="shape-dot _b" style={{ width: 26, height: 26, left: "14%", bottom: 90, animationDelay: "1s" }} />
-        <i className="shape-ring" style={{ width: 64, height: 64, right: "8%", top: 90 }} />
-        <i className="shape-dot _o" style={{ width: 40, height: 40, right: "14%", bottom: 60, animationDelay: "2s" }} />
-        <div className="cmn-inner">
-          <div className="conts">
-            <div className="col">
-              <Reveal className="text-box">
-                <h2 className="ttl">あなたの声が、<br /><em>地域のおもしろい</em>をつくる。</h2>
-                <p className="text">
-                  Vinsight（ヴィンサイト）は、アンケートへのご回答を通じて、地域や企業の「いま」を知るためのモニターサイトです。<br />
-                  回答するとポイントがたまり、QUOカードPay・Amazonギフト券・たまルンポイントと交換できます。<br />
-                  まずはモニター登録から始めましょう。
-                </p>
-                <Pill href="/register" variant="orange" left>View More</Pill>
-              </Reveal>
-              <Reveal className="img-box" delay={150}>
-                <div className="blob" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/monitor.webp" alt="" />
-              </Reveal>
-            </div>
+      {/* ───────── HERO: message on the left, login on the right ───────── */}
+      <section className="hero">
+        <div className="cmn-inner hero-in">
+          <div className="hero-copy">
+            <h1>アンケートに答えて、<br />ポイントをためよう。</h1>
+            <p>Vinsight（ヴィンサイト）は、アンケートへのご回答を通じて、地域や企業の「いま」を知るためのモニターサイトです。たまったポイントは、デジタルギフトに交換できます。</p>
+            <dl className="hero-stats" aria-label="Vinsightの数字（デモ用のダミー値）">
+              <div><dt>登録モニター</dt><dd><CountUp to={3810} /><small>名</small></dd></div>
+              <div><dt>実施アンケート</dt><dd><CountUp to={597} /><small>件</small></dd></div>
+              <div><dt>ポイント交換</dt><dd><CountUp to={5835} /><small>件</small></dd></div>
+            </dl>
           </div>
-        </div>
-      </section>
-
-      <Wave from="#fff" to="#fcc800" />
-      <section className="top-stats" aria-label="Vinsightの数字">
-        <i className="shape-dot _o" style={{ width: 120, height: 120, left: -40, top: -30, opacity: .9 }} />
-        <i className="shape-dot _b" style={{ width: 64, height: 64, right: "6%", bottom: 20, animationDelay: "1.5s" }} />
-        <div className="cmn-inner">
-          <div className="stats-grid">
-            <div className="stat"><div className="num jost"><CountUp to={3810} /><small>名</small></div><div className="lbl">登録モニター</div></div>
-            <div className="stat"><div className="num jost"><CountUp to={597} /><small>件</small></div><div className="lbl">実施アンケート</div></div>
-            <div className="stat"><div className="num jost"><CountUp to={5835} /><small>件</small></div><div className="lbl">ポイント交換</div></div>
-          </div>
-          <p className="stat" style={{ textAlign: "center", marginTop: 22 }}><span className="note">※数値はデモ用のダミー表示です。</span></p>
-        </div>
-      </section>
-      <Wave from="#fcc800" to="#fff" />
-
-      <section className="top-steps">
-        <div className="cmn-inner">
-          <Reveal><SectionTitle en="HOW IT WORKS" jp="ご利用の流れ" /></Reveal>
-          <div className="steps">
-            {STEPS.map((s, i) => (
-              <Reveal key={s.no} delay={i * 120}>
-                <div className={`step ${s.c}`}>
-                  <div className="pic"><img src={`/images/${s.img}.webp`} alt="" style={{ width: "auto", height: "82%" }} /></div>
-                  <div className="no">{s.no}</div>
-                  <h3>{s.t}</h3>
-                  <p>{s.d}</p>
+            <div className="auth" id="login">
+              <div className="auth-form">
+                <div className="tabs-u" role="tablist" aria-label="ログインまたは新規登録">
+                  <button role="tab" aria-selected={tab === "login"} className={tab === "login" ? "on" : ""} onClick={() => setTab("login")} type="button">ログイン</button>
+                  <button role="tab" aria-selected={tab === "register"} className={tab === "register" ? "on" : ""} onClick={() => setTab("register")} type="button">はじめての方</button>
                 </div>
+                {tab === "login" ? (
+                  <form className="fm" onSubmit={login} noValidate>
+                    {expired && !err && <Alert kind="info">ログインの有効期限が切れました（またはログアウトされました）。お手数ですが、もう一度ログインしてください。</Alert>}
+                    {err && <Alert kind="err">{err}</Alert>}
+                    <Row label="メールアドレス または モニター番号"><input type="text" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} /></Row>
+                    <Row label="パスワード"><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></Row>
+                    <div className="form-actions" style={{ justifyContent: "flex-start", marginTop: 4 }}><Pill type="submit" disabled={busy}>{busy ? "確認中…" : "ログインする"}</Pill></div>
+                    <div className="hint"><Link href="/password-reset" style={{ textDecoration: "underline" }}>パスワードをお忘れの方はこちら</Link>（再設定用のURLをメールでお送りします）</div>
+                    <div className="demo-note">
+                      <b>デモ用ログイン情報</b><br />
+                      モニター：<b>demo@vinsight.example</b> ／ <b>monitor123</b>（モニター番号 1001）<br />
+                      管理画面：<a href="/admin/login" style={{ textDecoration: "underline" }}>/admin/login</a>（<b>admin</b> ／ <b>admin123</b>）
+                      <br /><button type="button" className="btn-sm" style={{ marginTop: 8 }} onClick={() => { setEmail("demo@vinsight.example"); setPassword("monitor123"); }}>入力する</button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="au-reg">
+                    <h3>モニター登録をはじめよう</h3>
+                    <p>登録すると、あなたに合ったアンケートが届きます。</p>
+                    <ul>
+                      <li>アンケートに回答してポイントをためられます</li>
+                      <li>ポイントは QUOカードPay・Amazonギフト券・たまルンポイントと交換できます</li>
+                      <li>新着情報はメールでもお知らせします</li>
+                    </ul>
+                    <Pill href="/register" left>新規登録へ進む</Pill>
+                  </div>
+                )}
+              </div>
+            </div>
+        </div>
+      </section>
+
+      {/* ───────── FLOW ───────── */}
+      <section className="sec" id="flow">
+        <div className="cmn-inner">
+          <Reveal className="sec-head"><SectionTitle en="FLOW" jp="ご利用の流れ" /></Reveal>
+          <ol className="flow-list">
+            {STEPS.map((st) => (
+              <li key={st.no} className="flow-step">
+                <span className="flow-no">{st.no}</span>
+                <h3>{st.t}</h3>
+                <p>{st.d}</p>
+                <Link className="tlink" href={st.cta.href}>{st.cta.label}<span aria-hidden="true">→</span></Link>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ───────── FEATURES ───────── */}
+      <section className="sec" id="about">
+        <div className="cmn-inner">
+          <Reveal className="sec-head">
+            <SectionTitle en="ABOUT" jp="あなたの声が、地域のおもしろいをつくる。" />
+            <p>回答するほどポイントがたまり、ギフトに交換できる。Vinsightは、モニターのみなさんの声で成り立っています。</p>
+          </Reveal>
+          <div className="feat">
+            {FEATURES.map((f, i) => (
+              <Reveal key={f.no} delay={(i % 2) * 100} className={`fc fc-${f.c}${f.wide ? " wide" : ""}`}>
+                <span className="fc-no">{f.no}</span>
+                <div className="fc-tx"><h3>{f.t.split("\n").map((l, k) => <span key={k}>{l}<br /></span>)}</h3><p>{f.d}</p></div>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="top-gifts">
+      {/* ───────── GIFTS ───────── */}
+      <section className="sec" id="gift">
         <div className="cmn-inner">
-          <Reveal><SectionTitle en="GIFT" jp="ポイント交換できるもの" /></Reveal>
+          <Reveal className="sec-head"><SectionTitle en="GIFT" jp="たまったポイントは、ギフトに。" /></Reveal>
           <div className="gifts">
             {GIFTS.map((g, i) => (
-              <Reveal key={g.t} delay={i * 120}>
-                <div className={`gift ${g.c}`}>
-                  <span className="tag">{g.tag}</span>
-                  <h3>{g.t}</h3>
-                  <div className="pt">500<small>pt / 1口</small></div>
-                  <p>{g.d}</p>
-                </div>
+              <Reveal key={g.t} delay={i * 110} className={`gc gc-${g.c}`}>
+                <span className="gc-tag">{g.tag}</span>
+                <h3>{g.t}{g.sub && <small>{g.sub}</small>}</h3>
+                <p>{g.d}</p>
+                <span className="gc-unit"><b>500</b> pt <i>/ 1口</i></span>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      <Wave from="#fff" to="#f4f2f2" />
-      <section className="top-login" id="login">
-        <i className="shape-dot _y" style={{ width: 90, height: 90, right: "-20px", top: 40, opacity: .8 }} />
-        <i className="shape-dot _g" style={{ width: 34, height: 34, left: "5%", bottom: 90, animationDelay: "1s" }} />
-        <div className="cmn-inner">
-          <Reveal><SectionTitle en="LOGIN" jp="モニターログイン／新規登録" /></Reveal>
-          <div className="login-grid">
-            <Reveal>
-              <div className="panel" style={{ height: "100%" }}>
-                <h3>Login<small>登録済みのモニターの方</small></h3>
-                <form className="fm" onSubmit={login} noValidate style={{ marginTop: 22 }}>
-                  {expired && !err && <Alert kind="info">ログインの有効期限が切れました（またはログアウトされました）。お手数ですが、もう一度ログインしてください。</Alert>}
-                  {err && <Alert kind="err">{err}</Alert>}
-                  <Row label="メールアドレス または モニター番号"><input type="text" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} /></Row>
-                  <Row label="パスワード"><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></Row>
-                  <div className="form-actions" style={{ justifyContent: "flex-start" }}><Pill type="submit" short disabled={busy}>{busy ? "確認中…" : "ログイン"}</Pill></div>
-                  <div className="hint"><Link href="/password-reset" style={{ textDecoration: "underline" }}>パスワードをお忘れの方はこちら</Link>（再設定用のURLをメールでお送りします）</div>
-                </form>
-                <div className="demo-note">
-                  <b>デモ用ログイン情報</b><br />
-                  モニター：<b>demo@vinsight.example</b> ／ <b>monitor123</b>（モニター番号 1001）<br />
-                  管理画面：<a href="/admin/login" style={{ textDecoration: "underline" }}>/admin/login</a>（<b>admin</b> ／ <b>admin123</b>）
-                  <br /><button type="button" className="btn-sm" style={{ marginTop: 8 }} onClick={() => { setEmail("demo@vinsight.example"); setPassword("monitor123"); }}>入力する</button>
-                </div>
-              </div>
-            </Reveal>
-            <Reveal delay={150}>
-              <div className="panel _yellow" style={{ height: "100%" }}>
-                <h3>Register<small>はじめての方</small></h3>
-                <p className="lead">モニター登録をすると、あなたに合ったアンケートが届きます。</p>
-                <ul className="points">
-                  <li>アンケートに回答してポイントをためられます</li>
-                  <li>ポイントは QUOカードPay・Amazonギフト券・たまルンポイントと交換できます</li>
-                  <li>新着情報はメールでもお知らせします</li>
-                </ul>
-                <Pill href="/register" variant="orange" short>新規登録</Pill>
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      <section className="top-news" id="news">
-        <div className="cmn-inner">
-          <div className="col">
-            <Reveal className="ttl-box"><SectionTitle en="News" jp="お知らせ" /></Reveal>
-            <Reveal className="list-box" delay={120}>
-              {news.loading && <div className="skel-wrap">{[0, 1, 2, 3].map((i) => <Skeleton key={i} h={54} />)}</div>}
-              {news.data && news.data.items.length === 0 && <p>現在お知らせはありません。</p>}
-              <ul className="news-list">
-                {news.data?.items.map((n) => (
-                  <li key={n.id}>
-                    <a href="#" onClick={(e) => { e.preventDefault(); setOpenNews(openNews === n.id ? null : n.id); }} aria-expanded={openNews === n.id}>
-                      <span className="date">{fmtDate(n.date)}</span><span className="tit">{n.title}</span>
-                    </a>
-                    {openNews === n.id && <div className="news-open">{n.body}</div>}
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      <section className="top-faq" id="faq">
-        <div className="cmn-inner">
-          <Reveal><SectionTitle en="FAQ" jp="よくあるご質問" /></Reveal>
+      {/* ───────── NEWS ───────── */}
+      <section className="sec" id="news">
+        <div className="cmn-inner news-grid">
+          <Reveal className="news-head">
+            <SectionTitle en="NEWS" jp="お知らせ" />
+            <p>サービスの最新情報をお届けします。</p>
+          </Reveal>
           <Reveal delay={100}>
-            <div className="faq">
-              {FAQ.map(([q, a]) => <details key={q}><summary>{q}</summary><div>{a}</div></details>)}
+            <ul className="nlist">
+              {news.loading && [0, 1, 2, 3].map((i) => <li key={i}><Skeleton h={62} r={12} style={{ margin: "10px 0" }} /></li>)}
+              {news.data && news.data.items.length === 0 && <li className="nl-empty">現在お知らせはありません。</li>}
+              {news.data?.items.map((n) => (
+                <li key={n.id} className={openNews === n.id ? "open" : ""}>
+                  <button type="button" onClick={() => setOpenNews(openNews === n.id ? null : n.id)} aria-expanded={openNews === n.id}>
+                    <span className="nl-date">{fmtDate(n.date)}</span>
+                    <span className="nl-t">{n.title}</span>
+                    <span className="nl-pl" aria-hidden="true" />
+                  </button>
+                  {openNews === n.id && <div className="nl-body">{n.body}</div>}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ───────── FAQ ───────── */}
+      <section className="sec" id="faq">
+        <div className="cmn-inner faq-grid">
+          <Reveal className="faq-head"><SectionTitle en="FAQ" jp="よくあるご質問" /></Reveal>
+          <Reveal delay={100}>
+            <div className="faq3">
+              {FAQ.map(([q, a], i) => (
+                <details key={q}><summary><span className="n">0{i + 1}</span><span className="qt">{q}</span><span className="pl" aria-hidden="true" /></summary><div>{a}</div></details>
+              ))}
             </div>
           </Reveal>
         </div>
       </section>
 
-      <section className="top-contact" id="contact">
-        <div className="cmn-inner">
-          <div className="contact-wrap">
-            <Reveal className="side">
-              <SectionTitle en="CONTACT" jp="お問い合わせ（モニター以外の方）" />
-              <p style={{ marginTop: 16, fontSize: "1.4rem", lineHeight: 1.9 }}>モニター登録やサイトについてのご質問はこちらからお問い合わせください。<br />すでにモニターの方は、ログイン後の「マイページ」内のお問い合わせフォームをご利用ください。</p>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="float-y" src="/images/person02.webp" alt="" />
-            </Reveal>
-            <Reveal className="form" delay={120}><VisitorInquiry /></Reveal>
-          </div>
+      {/* ───────── CONTACT ───────── */}
+      <section className="contact" id="contact">
+        <div className="cmn-inner ct">
+          <Reveal className="ct-side">
+            <SectionTitle en="CONTACT" jp="モニター以外の方のお問い合わせ" />
+            <p>モニター登録やサイトについてのご質問はこちらから。すでにモニターの方は、ログイン後の「マイページ」内のお問い合わせフォームをご利用ください。</p>
+          </Reveal>
+          <Reveal delay={120}><div className="ct-card"><VisitorInquiry /></div></Reveal>
         </div>
       </section>
     </>

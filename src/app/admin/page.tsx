@@ -31,8 +31,6 @@ export default function Dashboard() {
             <Link href="/admin/inquiries" className="btn line">お問い合わせを見る</Link>
           </div>
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/images/staff01.webp" alt="" />
       </div>
 
       <div className="tiles">

@@ -40,8 +40,6 @@ export default function Register() {
             本登録URL：<Link href={done.registUrl.replace(/^https?:\/\/[^/]+/, "")} style={{ textDecoration: "underline", wordBreak: "break-all" }}>{done.registUrl}</Link>
           </div>
           <Pill href={done.registUrl.replace(/^https?:\/\/[^/]+/, "")}>本登録を完了する（デモ）</Pill>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/person03.webp" alt="" />
         </div>
       </div>
     );

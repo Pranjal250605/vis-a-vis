@@ -3,30 +3,36 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, toast } from "@/lib/client";
 
-/** Pill button in the client site's style (.cmn-btn._01) */
+const Arrow = () => (
+  <svg className="stk-arr" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+);
+
+/** "Sticker" button: chunky outline + offset shadow that echoes the outlined illustrations. */
 export function Pill({
   href, onClick, type = "button", variant, left, short, disabled, children, download,
 }: {
   href?: string; onClick?: () => void; type?: "button" | "submit"; variant?: "orange" | "blue" | "gray"; left?: boolean; short?: boolean; disabled?: boolean; children: ReactNode; download?: boolean;
 }) {
-  const cls = ["cmn-btn", variant ? "_" + variant : "", left ? "_left" : "", short ? "_short" : ""].join(" ").trim();
-  const inner = (<><span className="_text">{children}</span><span className="_icon" /></>);
+  const wrap = ["stk-wrap", left ? "_left" : ""].join(" ").trim();
+  const cls = ["stk", variant ? "_" + variant : "", short ? "_short" : ""].join(" ").trim();
+  const inner = (<><span className="stk-t">{children}</span><Arrow /></>);
   return (
-    <div className={cls}>
+    <div className={wrap}>
       {href ? (
-        download ? <a href={href}>{inner}</a> : <Link href={href}>{inner}</Link>
+        download ? <a className={cls} href={href}>{inner}</a> : <Link className={cls} href={href}>{inner}</Link>
       ) : (
-        <button type={type} onClick={onClick} disabled={disabled}>{inner}</button>
+        <button className={cls} type={type} onClick={onClick} disabled={disabled}>{inner}</button>
       )}
     </div>
   );
 }
 
+/** Section heading: small coloured eyebrow + large Japanese headline. */
 export function SectionTitle({ en, jp, small }: { en: string; jp: string; small?: boolean }) {
   return (
-    <h2 className={small ? "sec-ttl" : "cmn-ttl01"}>
-      <span className="en">{en}</span>
-      <span className="jp">{jp}</span>
+    <h2 className={small ? "sh sh-s" : "sh"}>
+      <span className="sh-en"><i aria-hidden="true" />{en}</span>
+      <span className="sh-jp">{jp}</span>
     </h2>
   );
 }
@@ -92,9 +98,9 @@ export function Alert({ kind, children }: { kind: "err" | "ok" | "info"; childre
 
 export function Logo({ href = "/" }: { href?: string }) {
   return (
-    <Link href={href} className="s-logo" aria-label="Vinsight">
-      <span className="mark" aria-hidden="true" />
-      <span>Vinsight<small>VIS-À-VIS MONITOR</small></span>
+    <Link href={href} className="lg" aria-label="Vinsight">
+      <span className="lg-mk" aria-hidden="true"><i /><i /></span>
+      <span className="lg-wm">Vinsight</span>
     </Link>
   );
 }

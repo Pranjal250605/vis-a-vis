@@ -1,7 +1,5 @@
-/* Vinsight monitor site – design follows https://www.vis-a-vis.co.jp/
-   Values taken from the client site's stylesheet: fonts Jost + Noto Sans JP, root font-size 10px,
-   header 77px white with yellow CONTACT tab, pill buttons (#fcc800 / #ff8900), footer #f4f2f2,
-   palette yellow #fcc800 · orange #ff8900 · blue #4d9df2 · green #57ba87 · purple #c598e7 · pink #f56eac. */
+/* Base styles for the monitor site (reset, fonts, forms, tables, My Page layout).
+   The visual identity – header, buttons, headings, hero, sections, footer – is defined in home.css. */
 
 .site, .site * { box-sizing: border-box; }
 .site {
@@ -70,54 +68,6 @@
 .cmn-btn._gray ._text { background-image: linear-gradient(to right, #a8a8a8, #a8a8a8 50%, #fff 50%); }
 .cmn-btn._gray ._icon::before { background: #a8a8a8; }
 
-/* ---------- hero (main visual) – positions copied from the client's CSS ---------- */
-.top-mainv { position: relative; }
-.top-mainv .loop-text { position: relative; display: flex; height: 71px; white-space: nowrap; overflow: hidden; }
-.top-mainv .loop-text span { flex: none; display: flex; align-items: center; margin: 0 11px; font-family: "Jost", "Noto Sans JP", sans-serif; font-weight: 700; font-size: 5.4rem; color: var(--navy); letter-spacing: .02em; animation: loop-text 50s infinite linear .5s both; }
-.top-mainv .loop-text span i { font-style: normal; color: var(--yellow); margin: 0 26px; }
-.top-mainv .mainv-illust { position: relative; display: flex; overflow: auto; box-sizing: content-box; width: 100%; height: 722px; margin-top: 7px; padding-top: 10px; transition: .3s ease opacity; opacity: 0; justify-content: center; align-items: center; -ms-overflow-style: none; scrollbar-width: none; }
-.top-mainv .mainv-illust.is-active { opacity: 1; }
-.top-mainv .mainv-illust::-webkit-scrollbar { display: none; }
-@media (max-width: 1315px) { .top-mainv .mainv-illust { justify-content: flex-start; } .top-mainv .mainv-illust .inner { cursor: grab; } }
-.top-mainv .mainv-illust .inner { position: relative; width: 1315px; min-width: 1315px; height: 722px; min-height: 722px; margin: 0 20px; transform: scale(var(--scale, 1)); }
-.top-mainv .mainv-illust .inner img { display: block; transform-origin: center center; pointer-events: none; max-width: none; height: auto; }
-.top-mainv .mainv-illust .inner > * { position: absolute; }
-.mv.planet { top: 20px; right: 273px; width: 127px; animation: floating-illust 4.5s infinite 1.5s ease alternate; }
-.mv.rocket { top: 54px; right: 0; width: 440px; animation: floating-illust 4.5s infinite ease alternate; }
-.mv.soccer { top: 44px; right: 401px; width: 121px; transform: translate(0, 0) rotate(-1deg); animation: floating-illust 4.5s infinite 1s ease alternate; }
-.mv.universe01 { top: 17px; right: 179px; width: 131px; animation: floating-illust 4s infinite ease alternate; }
-.mv.universe02 { top: 170px; right: 23px; width: 155px; animation: floating-illust 4s infinite ease alternate; }
-.mv.interview { top: 2px; right: 568px; width: 141px; animation: floating-illust 6s infinite ease alternate; }
-.mv.bmx { top: 164px; right: 183px; width: 140px; transform: translate(0, 0) rotate(-1deg); animation: floating-illust 5s infinite 1s ease alternate; }
-.mv.monitor { top: 185px; left: 57px; width: 183px; animation: floating-illust 6.5s infinite 1s ease alternate; }
-.mv.magazine01 { top: 0; left: 0; width: 372px; animation: floating-illust 4s infinite 1s ease alternate; }
-.mv.magazine02 { top: 5px; left: 356px; width: 107px; animation: bounce-illust 7s 5s steps(1) infinite; }
-.mv.parfait { top: 147px; left: 253px; width: 153px; animation: bounce-illust 7s 1.5s steps(1) infinite; }
-.mv.exclamation { top: 275px; right: 631px; width: 22px; animation: exclamation-fade 6s infinite ease; }
-.mv.person01 { bottom: 121px; left: 571px; width: 18px; animation: bounce-illust 7s 2.5s steps(1) infinite; }
-.mv.person02 { bottom: 107px; left: 539px; width: 27px; animation: bounce-illust 7s 2.5s steps(1) infinite; }
-.mv.person03 { bottom: 79px; left: 510px; width: 34px; animation: bounce-illust 7s 2.5s steps(1) infinite; }
-.mv.news { top: 403px; left: 534px; width: 59px; animation: bounce-illust 7s 4s steps(1) infinite; }
-.mv.shirt { bottom: 94px; left: 593px; width: 115px; animation: bounce-illust 7s 2.5s steps(1) infinite; }
-.mv.staff01 { top: 309px; right: 498px; width: 36px; animation: bounce-illust 7s steps(1) infinite; }
-.mv.staff02 { top: 367px; right: 591px; width: 41px; animation: bounce-illust 7s steps(1) infinite; }
-.mv.base { right: 237px; bottom: 0; width: 865px; }
-.mv.haremachi { top: 295px; right: 437px; width: 185px; }
-.mv.bizen { top: 420px; right: 556px; width: 54px; }
-.mv.shrine { top: 402px; left: 553px; width: 131px; }
-.mv.front { top: 183px; left: 218px; width: 848px; }
-.top-mainv .mainv-scroll { position: absolute; bottom: 120px; left: 70px; display: inline-block; z-index: 2; }
-.top-mainv .mainv-scroll a { font-family: "Jost", "Noto Sans JP", sans-serif; font-size: 1.2rem; font-weight: 500; position: relative; display: inline-block; }
-.top-mainv .mainv-scroll a span { position: relative; display: block; width: 1px; height: 113px; margin: 3px auto 0; }
-.top-mainv .mainv-scroll a span::after { content: ""; position: absolute; top: 0; left: 0; display: block; width: 100%; height: 0; animation: mainv-scroll 2s ease-in-out infinite; background: #000; }
-@media (max-width: 768px) { .top-mainv .mainv-scroll { display: none; } }
-
-@keyframes loop-text { from { transform: translateX(0); } to { transform: translateX(-100%); } }
-@keyframes floating-illust { 0% { transform: translate(0, 0) rotate(-1deg); } 50% { transform: translate(0, -7px) rotate(0deg); } 100% { transform: translate(0, 0) rotate(1deg); } }
-@keyframes exclamation-fade { 0% { transform: translateY(0); opacity: 0; } 50% { transform: translateY(0); opacity: 0; } 60% { transform: translateY(-5px); opacity: 1; } 90% { transform: translateY(-5px); opacity: 1; } 100% { transform: translateY(0); opacity: 0; } }
-@keyframes bounce-illust { 0% { transform: translateY(0); } 30% { transform: translateY(0); } 33% { transform: translateY(-5px); } 36% { transform: translateY(0); } 39% { transform: translateY(-5px); } 42% { transform: translateY(0); } 100% { transform: translateY(0); } }
-@keyframes mainv-scroll { 0% { top: 0; height: 0; opacity: 0; } 30% { height: 60px; opacity: 1; } 100% { top: 113px; height: 0; opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .top-mainv .mainv-illust .inner > *, .top-mainv .loop-text span { animation: none !important; } }
 
 /* ---------- landing sections ---------- */
 .top-beat { background: #fff; padding: 121px 0 100px; position: relative; }

@@ -151,3 +151,30 @@ table.tbl.dense td.acts, table.tbl.dense .btns { white-space: normal; }
   .tbl-wrap { max-height: none; }
 }
 @media (max-width: 640px) { .adm-toasts { right: 12px; left: 12px; bottom: 12px; } .dash-hero { padding: 20px; } .dash-hero h2 { font-size: 1.9rem; } }
+
+/* ----- simple, professional pass: no decorative shapes, no motion (hover/focus feedback stays) ----- */
+.adm *, .adm *::before, .adm *::after, .login-wrap, .login-wrap * { animation: none !important; }
+.adm-side { background: #17284d; }
+.dash-hero { border-radius: 10px; background: #fff; color: var(--ink, #1b1f2a); border: 1px solid #dfe4ec; border-left: 4px solid #1f4e9c; box-shadow: none; }
+.dash-hero::before, .dash-hero::after { display: none; }
+.dash-hero h2 { font-weight: 700; }
+.dash-hero p { opacity: 1; color: #5a6475; }
+.dash-hero .btn { background: #1f4e9c; border-color: #1f4e9c; color: #fff !important; }
+.dash-hero .btn:hover { background: #fff; color: #1f4e9c !important; }
+.dash-hero .btn.line { background: #fff; border-color: #c4ccd9; color: #1b1f2a !important; }
+.dash-hero .btn.line:hover { border-color: #1b1f2a; }
+.login-wrap { background: #f3f5f9; }
+.login-card { border-radius: 10px; box-shadow: 0 10px 30px -14px rgba(20, 36, 70, .3); border: 1px solid #dfe4ec; }
+.btn { border-radius: 6px; background: #1f4e9c; border-color: #1f4e9c; color: #fff !important; font-weight: 500; }
+.btn:hover { background: #173b78; border-color: #173b78; }
+.btn.line { background: #fff; border-color: #c4ccd9; color: #1b1f2a !important; }
+.btn.line:hover { background: #f5f7fa; border-color: #1b1f2a; }
+.btn.navy { background: #17284d; border-color: #17284d; color: #fff !important; }
+.btn.navy:hover { background: #0f1c38; color: #fff !important; }
+.btn.danger { background: #fff; border-color: #e8383d; color: #e8383d !important; }
+.btn.danger:hover { background: #e8383d; color: #fff !important; }
+.login-wrap .btn.navy:hover { background: #0f1c38; color: #fff !important; }
+.dash-hero .btn:hover { background: #173b78; color: #fff !important; }
+.tile::after { display: none; }
+.tile { border-radius: 10px; }
+.adm-side li a.on { background: rgba(255, 255, 255, .14); color: #fff; box-shadow: none; }

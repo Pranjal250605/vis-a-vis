@@ -63,8 +63,6 @@ export default function Trade() {
         <h2>ポイント交換のお申し込みを受け付けました</h2>
         <p>消費ポイント：<b className="jost">{yen(result.used)}</b> pt ／ 残りポイント：<b className="jost">{yen(result.balance)}</b> pt<br />ご登録のメールアドレス宛に受付確認メールをお送りしました。発送（送付）までしばらくお待ちください。</p>
         <Pill href="/mypage">マイページへ戻る</Pill>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/images/parfait.webp" alt="" />
       </div>
     );
   }

@@ -24,8 +24,6 @@ export default function Answer() {
       <p style={{ whiteSpace: "pre-wrap" }}>{done.postText}</p>
       {done.points > 0 && <p><b className="jost" style={{ fontSize: "2.6rem", color: "var(--orange)" }}>+{done.points}</b> point を獲得しました。</p>}
       <Pill href="/mypage">マイページへ戻る</Pill>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/images/person01.webp" alt="" />
     </div>
   );
 
