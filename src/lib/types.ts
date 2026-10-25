@@ -5,6 +5,8 @@ export interface Monitor {
   id: number; // モニター番号 (表記は「モニター番号」に統一 / Req.2)
   email: string;
   passwordHash: string;
+  /** true until the member (carried over from the old site) has chosen a new password; cleared by the first change */
+  passwordChangeRequired: boolean;
   name: string;
   postcode: string;
   prefecture: string;

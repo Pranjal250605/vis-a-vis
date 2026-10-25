@@ -1,9 +1,11 @@
 import { getStore } from "./store";
 import { createSessionToken, readSessionToken, type Session } from "./tokens";
+import { passwordStamp } from "./security/passwords";
 import type { Monitor } from "@/lib/types";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public fields?: Record<string, string>) {
+  /** `code` lets the browser react to a specific condition (e.g. PASSWORD_CHANGE_REQUIRED) without parsing the message. */
+  constructor(public status: number, message: string, public fields?: Record<string, string>, public code?: string) {
     super(message);
   }
 }
@@ -35,6 +37,8 @@ export interface Route {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
   guard?: "monitor" | "admin";
+  /** A member who still has to choose a new password may call only the routes that set this. */
+  allowPendingPasswordChange?: boolean;
   handler: Handler;
 }
 
@@ -43,6 +47,7 @@ export const MONITOR_COOKIE = "vin_m";
 export const ADMIN_COOKIE = "vin_a";
 
 export const createSession = (s: Session) => createSessionToken(s);
+export const createMonitorSession = (m: Monitor) => createSession({ kind: "monitor", monitorId: m.id, pw: passwordStamp(m.passwordHash) });
 /** ログアウトはブラウザ側のCookie削除で行う（トークン自体はサーバーに保存しない） */
 export const destroySession = (_t?: string) => { void _t; };
 export const readSession = (t?: string) => readSessionToken(t);
@@ -60,7 +65,8 @@ export function monitorFromCookie(cookies: Record<string, string>): Monitor | un
   const s = readSession(cookies[MONITOR_COOKIE]);
   if (!s || s.kind !== "monitor") return undefined;
   const m = getStore().monitors.find((x) => x.id === s.monitorId);
-  return m && m.status === "有効" ? m : undefined;
+  // A session made before the last password change no longer counts.
+  return m && m.status === "有効" && s.pw === passwordStamp(m.passwordHash) ? m : undefined;
 }
 
 export function toSafeMonitor(m: Monitor) {

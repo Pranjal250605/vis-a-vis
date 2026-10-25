@@ -3,6 +3,7 @@ import {
 } from "@/lib/constants";
 import { RE } from "@/lib/rules";
 import { num, str, strArr } from "./http";
+import { checkPasswordPolicy, type PasswordContext } from "./security/passwords";
 import type { Monitor } from "@/lib/types";
 
 export type ProfileInput = Pick<Monitor,
@@ -41,7 +42,12 @@ export function validateProfile(b: any, opts: { emailConfirm?: boolean } = {}) {
   return { v, errors };
 }
 
-export function validatePassword(pw: string, confirm: string, errors: Record<string, string>, key = "password") {
-  if (!RE.password.test(pw)) errors[key] = "パスワードは半角英数字8文字以上（英字と数字を両方含む）で入力してください。";
+/** Checks a new password against the policy (security/passwords.ts) and its confirmation field. */
+export function validatePassword(pw: string, confirm: string, errors: Record<string, string>, ctx: PasswordContext = { identifiers: [] }, key = "password") {
+  const problem = checkPasswordPolicy(pw, ctx);
+  if (problem) errors[key] = problem;
   else if (pw !== confirm) errors[key + "Confirm"] = "パスワードが一致しません。";
 }
+
+/** Values a member's password must not equal. */
+export const monitorIdentifiers = (m: Pick<Monitor, "id" | "email">) => [String(m.id), m.email];

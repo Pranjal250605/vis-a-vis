@@ -1,6 +1,7 @@
 // In-memory data store with dummy seed data (no database, per the demo brief).
 // Data lives in globalThis so it survives hot reloads; restarting the server (or POST /api/admin/reset-demo) re-seeds it.
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
+import { hashPassword } from "./security/passwords";
 import {
   CHILD_STAGES, EMPLOYMENTS, GOURMET_GENRES, GOURMET_SCENES, INDUSTRIES, JOB_TYPES, LIFE_INFOS, MEDIAS, OUTINGS,
   POINTS_PER_UNIT, PREFECTURES, WANTED_INFOS, SURVEY_TYPES,
@@ -24,14 +25,15 @@ export interface Store {
   seq: Record<string, number>;
 }
 
+const MAX_AUDITS = 5000;
+
 /** 管理者操作の監査ログ（モニター情報編集・手動ポイント付与など） */
 export function audit(by: string, action: string, target: string, detail: string) {
   const s = getStore();
   s.audits.unshift({ id: nextId("audit"), at: new Date().toISOString(), by, action, target, detail });
+  if (s.audits.length > MAX_AUDITS) s.audits.length = MAX_AUDITS; // failed logins are logged too; keep a flood from filling memory
 }
 
-const SALT = "vinsight-demo-salt";
-export const hashPassword = (pw: string) => createHash("sha256").update(SALT + pw).digest("hex");
 export const newToken = () => randomBytes(12).toString("hex");
 
 // ---------- deterministic RNG ----------
@@ -159,6 +161,9 @@ function seed(): Store {
   };
 
   // ----- monitors -----
+  // Every seeded member stands for a member carried over from the old site: they all start with the same "old" password
+  // and must choose a new one at their first login (passwordChangeRequired). Hashing is slow on purpose, so do it once.
+  const legacyPasswordHash = hashPassword(DEMO_MONITOR.password);
   const monitors: Monitor[] = [];
   const total = 64;
   for (let i = 0; i < total; i++) {
@@ -174,7 +179,7 @@ function seed(): Store {
     const answeredAgo = r() < 0.7 ? Math.floor(r() * 80) : 100 + Math.floor(r() * 400);
     const loginAgo = Math.min(answeredAgo, Math.floor(r() * 30));
     monitors.push({
-      id, email: i === 0 ? DEMO_MONITOR.email : `user${id}@example.com`, passwordHash: hashPassword(DEMO_MONITOR.password),
+      id, email: i === 0 ? DEMO_MONITOR.email : `user${id}@example.com`, passwordHash: legacyPasswordHash, passwordChangeRequired: true,
       name: i === 0 ? "山田 花子" : name, postcode: pc, prefecture: "岡山県", city, street: `${street}${1 + Math.floor(r() * 9)}-${1 + Math.floor(r() * 20)}`,
       tel: `090-${String(1000 + Math.floor(r() * 8999))}-${String(1000 + Math.floor(r() * 8999))}`,
       birth: i === 0 ? "1988-04-12" : birth, gender: i === 0 ? "女性" : gender, married: i === 0 ? true : married, children: i === 0 ? 2 : children,

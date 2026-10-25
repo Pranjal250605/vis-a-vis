@@ -6,7 +6,7 @@ import { INPUT_HINTS } from "@/lib/rules";
 import { Checks, Row } from "./ui";
 
 export interface ProfileForm {
-  email: string; emailConfirm: string; password: string; passwordConfirm: string;
+  email: string; emailConfirm: string; currentPassword: string; password: string; passwordConfirm: string;
   name: string; postcode: string; prefecture: string; city: string; street: string; tel: string;
   birth: string; gender: string; married: string; children: string; childStages: string[];
   industry: string; jobType: string; employment: string;
@@ -14,7 +14,7 @@ export interface ProfileForm {
 }
 
 export const emptyProfile = (): ProfileForm => ({
-  email: "", emailConfirm: "", password: "", passwordConfirm: "", name: "", postcode: "", prefecture: "岡山県", city: "", street: "", tel: "",
+  email: "", emailConfirm: "", currentPassword: "", password: "", passwordConfirm: "", name: "", postcode: "", prefecture: "岡山県", city: "", street: "", tel: "",
   birth: "", gender: "", married: "未婚", children: "0", childStages: [], industry: "", jobType: "", employment: "",
   outings: [], gourmetGenres: [], gourmetScenes: [], wantedInfos: [], lifeInfos: [], medias: [],
 });
@@ -61,6 +61,11 @@ export function ProfileFields({
           <Row label="パスワード（確認）" required={!passwordOptional} optional={passwordOptional} error={errors.passwordConfirm}>
             <input type="password" autoComplete="new-password" value={v.passwordConfirm} className={bad("passwordConfirm")} onChange={(e) => set({ passwordConfirm: e.target.value })} />
           </Row>
+          {passwordOptional && v.password && (
+            <Row label="現在のパスワード" required error={errors.currentPassword} hint="パスワードを変更するときは、本人確認のため現在のパスワードも入力してください。">
+              <input type="password" autoComplete="current-password" value={v.currentPassword} className={bad("currentPassword")} onChange={(e) => set({ currentPassword: e.target.value })} />
+            </Row>
+          )}
         </>
       )}
 

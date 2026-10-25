@@ -53,8 +53,8 @@ export default function Landing() {
     e.preventDefault();
     setBusy(true); setErr("");
     try {
-      await api("/auth/login", { body: { email, password } });
-      router.push("/mypage");
+      const r = await api<{ passwordChangeRequired: boolean }>("/auth/login", { body: { email, password } });
+      router.push(r.passwordChangeRequired ? "/password-change" : "/mypage");
     } catch (ex) { setErr((ex as ApiClientError).message); } finally { setBusy(false); }
   };
 
@@ -89,6 +89,7 @@ export default function Landing() {
                     <div className="demo-note">
                       <b>デモ用ログイン情報</b><br />
                       モニター：<b>demo@vinsight.example</b> ／ <b>monitor123</b>（モニター番号 1001）<br />
+                      ※旧サイトからの会員は、初回ログイン時に新しいパスワードの設定が必要です。<br />
                       管理画面：<a href="/admin/login" style={{ textDecoration: "underline" }}>/admin/login</a>（<b>admin</b> ／ <b>admin123</b>）
                       <br /><button type="button" className="btn-sm" style={{ marginTop: 8 }} onClick={() => { setEmail("demo@vinsight.example"); setPassword("monitor123"); }}>入力する</button>
                     </div>

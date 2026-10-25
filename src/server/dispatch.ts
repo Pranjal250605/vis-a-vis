@@ -1,6 +1,10 @@
-import { ADMIN_COOKIE, ApiError, Ctx, FileResult, MONITOR_COOKIE, Route, monitorFromCookie, parseCookies, readSession } from "./http";
+import {
+  ADMIN_COOKIE, ApiError, Ctx, FileResult, MONITOR_COOKIE, Route, createMonitorSession, createSession, monitorFromCookie, parseCookies, readSession,
+} from "./http";
 import { adminRoutes } from "./routes-admin";
 import { siteRoutes } from "./routes-site";
+import { serializeCookie } from "./security/cookies";
+import { RequestRejected, assertSameOrigin, readJsonBody } from "./security/request";
 
 const routes: Route[] = [...siteRoutes, ...adminRoutes];
 
@@ -26,7 +30,10 @@ export async function dispatch(req: Request): Promise<Response> {
   const path = url.pathname.replace(/^\/api/, "") || "/";
   const cookies = parseCookies(req.headers.get("cookie"));
   const setCookies: string[] = [];
+  const touchedCookies = new Set<string>();
+  const setCookie = (name: string, value: string | null) => { touchedCookies.add(name); setCookies.push(serializeCookie(name, value)); };
   try {
+    assertSameOrigin(req);
     let found: { route: Route; params: Record<string, string> } | null = null;
     let pathMatched = false;
     for (const r of routes) {
@@ -41,25 +48,26 @@ export async function dispatch(req: Request): Promise<Response> {
     const monitor = monitorFromCookie(cookies);
     if (found.route.guard === "admin" && !isAdmin) throw new ApiError(401, "管理者ログインが必要です。");
     if (found.route.guard === "monitor" && !monitor) throw new ApiError(401, "ログインが必要です。");
-
-    let body: any = {};
-    if (req.method !== "GET" && req.method !== "DELETE") {
-      try { body = await req.json(); } catch { body = {}; }
+    if (monitor?.passwordChangeRequired && found.route.guard === "monitor" && !found.route.allowPendingPasswordChange) {
+      throw new ApiError(403, "新しいパスワードの設定が必要です。", undefined, "PASSWORD_CHANGE_REQUIRED");
     }
-    const ctx: Ctx = {
-      req, url, q: url.searchParams, params: found.params, body, monitor, isAdmin, origin: url.origin,
-      setCookie: (name, value) =>
-        setCookies.push(value === null ? `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0` : `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax`),
-    };
+
+    const body = await readJsonBody(req);
+    const ctx: Ctx = { req, url, q: url.searchParams, params: found.params, body, monitor, isAdmin, origin: url.origin, setCookie };
     const result = await found.route.handler(ctx);
+
+    // Idle timeout: every request by a signed-in user issues a fresh short-lived session (unless the route set one itself, e.g. login/logout).
+    if (monitor && !touchedCookies.has(MONITOR_COOKIE)) setCookie(MONITOR_COOKIE, createMonitorSession(monitor));
+    if (isAdmin && !touchedCookies.has(ADMIN_COOKIE)) setCookie(ADMIN_COOKIE, createSession({ kind: "admin" }));
     if (result && typeof result === "object" && (result as FileResult).__file) {
       const f = result as FileResult;
       return new Response(f.content, { headers: { "content-type": f.contentType, "content-disposition": `attachment; filename="${f.filename}"`, "cache-control": "no-store" } });
     }
     return json(result ?? { ok: true }, 200, setCookies);
   } catch (e) {
-    if (e instanceof ApiError) return json({ error: e.message, fields: e.fields }, e.status, setCookies);
-    console.error(e);
+    if (e instanceof ApiError) return json({ error: e.message, fields: e.fields, code: e.code }, e.status, setCookies);
+    if (e instanceof RequestRejected) return json({ error: e.message }, e.status);
+    console.error(e); // details stay in the server log; the browser only gets a generic message
     return json({ error: "サーバーエラーが発生しました。" }, 500);
   }
 }

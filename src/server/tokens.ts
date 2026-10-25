@@ -5,9 +5,7 @@
 // A signed token lives in the browser cookie and is verified with the secret, so a logged-in browser stays logged in
 // across server restarts (as long as the account still exists in the seed data).
 import { createHmac, timingSafeEqual } from "node:crypto";
-
-// Demo secret. In a real deployment set VINSIGHT_SECRET to a long random value.
-const SECRET = process.env.VINSIGHT_SECRET || "vinsight-demo-secret-change-me-in-production";
+import { SECRET, SESSION_IDLE_MS } from "./security/config";
 
 const mac = (data: string) => createHmac("sha256", SECRET).update(data).digest();
 
@@ -33,13 +31,14 @@ export function verifyToken<T extends Record<string, unknown> = Record<string, u
 }
 
 // ---- sessions ----
-export type Session = { kind: "monitor" | "admin"; monitorId?: number };
-export const SESSION_TTL = 12 * 60 * 60 * 1000;
-export const createSessionToken = (s: Session) => signToken({ k: "sess", kind: s.kind, monitorId: s.monitorId }, SESSION_TTL);
+// `pw` is the stamp of the member's password at login time: changing the password invalidates every older session.
+// The token only lives for the idle limit; the server issues a fresh one on each request (see dispatch.ts).
+export type Session = { kind: "monitor" | "admin"; monitorId?: number; pw?: string };
+export const createSessionToken = (s: Session) => signToken({ k: "sess", kind: s.kind, monitorId: s.monitorId, pw: s.pw }, SESSION_IDLE_MS[s.kind]);
 export function readSessionToken(t?: string | null): Session | undefined {
-  const p = verifyToken<{ k: string; kind: Session["kind"]; monitorId?: number }>(t);
+  const p = verifyToken<{ k: string; kind: Session["kind"]; monitorId?: number; pw?: string }>(t);
   if (!p || p.k !== "sess" || (p.kind !== "monitor" && p.kind !== "admin")) return undefined;
-  return { kind: p.kind, monitorId: p.monitorId };
+  return { kind: p.kind, monitorId: p.monitorId, pw: p.pw };
 }
 
 // ---- image CAPTCHA: the id carries a keyed hash of the answer ----
@@ -51,7 +50,7 @@ export function checkCaptcha(id: unknown, text: unknown): boolean {
 }
 
 // ---- password reset links: bound to the current password hash, so a link stops working once it was used ----
-export const makeResetToken = (monitorId: number, passwordHash: string) => signToken({ k: "reset", id: monitorId, pw: passwordHash.slice(0, 16) }, 60 * 60 * 1000);
+export const makeResetToken = (monitorId: number, passwordStamp: string) => signToken({ k: "reset", id: monitorId, pw: passwordStamp }, 60 * 60 * 1000);
 export function readResetToken(t: unknown): { id: number; pw: string } | null {
   const p = verifyToken<{ k: string; id: number; pw: string }>(typeof t === "string" ? t : "");
   return p && p.k === "reset" ? { id: p.id, pw: p.pw } : null;

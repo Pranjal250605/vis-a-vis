@@ -2,10 +2,13 @@
 import { EXCHANGE_ITEMS, POINTS_PER_UNIT } from "@/lib/constants";
 import { RE } from "@/lib/rules";
 import {
-  ADMIN_COOKIE, ApiError, Route, createSession, csvList, destroySession, MONITOR_COOKIE, parseCookies, EMAIL_RE, num, str, strArr, toSafeMonitor,
+  ADMIN_COOKIE, ApiError, Route, createMonitorSession, csvList, destroySession, MONITOR_COOKIE, parseCookies, EMAIL_RE, num, str, strArr, toSafeMonitor,
 } from "./http";
-import { fillTemplate, getStore, hashPassword, isActiveMember, matchTarget, newToken, nextId, pointLots, sendMail } from "./store";
-import { validatePassword, validateProfile } from "./validate";
+import { assertCurrentPassword, authenticateMonitor, setMonitorPassword } from "./auth";
+import { clientIp } from "./security/request";
+import { hashPassword, passwordStamp } from "./security/passwords";
+import { fillTemplate, getStore, isActiveMember, matchTarget, newToken, nextId, pointLots, sendMail } from "./store";
+import { monitorIdentifiers, validatePassword, validateProfile } from "./validate";
 import type { Monitor } from "@/lib/types";
 
 import { checkCaptcha, makeCaptchaId, makeResetToken, readResetToken } from "./tokens";
@@ -29,14 +32,25 @@ export const siteRoutes: Route[] = [
   {
     method: "POST", path: "/auth/login",
     handler: (c) => {
-      const email = str(c.body.email).toLowerCase();
-      const m = getStore().monitors.find((x) => x.email.toLowerCase() === email || String(x.id) === email);
-      if (!m || m.passwordHash !== hashPassword(str(c.body.password))) throw new ApiError(401, "メールアドレス（またはモニター番号）かパスワードが正しくありません。");
-      if (m.status === "仮登録") throw new ApiError(403, "本登録が完了していません。仮登録完了メールのURLから本登録を完了してください。");
-      if (m.status !== "有効") throw new ApiError(403, "このアカウントではログインできません。");
+      const m = authenticateMonitor(str(c.body.email), str(c.body.password), clientIp(c.req));
       m.prevLoginAt = m.lastLoginAt;
       m.lastLoginAt = new Date().toISOString();
-      c.setCookie(MONITOR_COOKIE, createSession({ kind: "monitor", monitorId: m.id }));
+      c.setCookie(MONITOR_COOKIE, createMonitorSession(m));
+      return { ok: true, passwordChangeRequired: m.passwordChangeRequired };
+    },
+  },
+  {
+    // A member carried over from the old site must choose a new password before anything else; this is the only page they may use.
+    method: "POST", path: "/auth/change-password", guard: "monitor", allowPendingPasswordChange: true,
+    handler: (c) => {
+      const m = c.monitor!;
+      const current = str(c.body.currentPassword);
+      assertCurrentPassword(m, current, clientIp(c.req));
+      const errors: Record<string, string> = {};
+      validatePassword(str(c.body.password), str(c.body.passwordConfirm), errors, { identifiers: monitorIdentifiers(m), current });
+      if (Object.keys(errors).length) throw new ApiError(422, "入力内容に誤りがあります。", errors);
+      setMonitorPassword(m, str(c.body.password), m.passwordChangeRequired ? "初回の新パスワード設定" : "本人による変更");
+      c.setCookie(MONITOR_COOKIE, createMonitorSession(m)); // the old session died with the old password
       return { ok: true };
     },
   },
@@ -53,7 +67,7 @@ export const siteRoutes: Route[] = [
     method: "GET", path: "/auth/me",
     handler: (c) => {
       const ck = parseCookies(c.req.headers.get("cookie"));
-      return { monitor: c.monitor ? { id: c.monitor.id, name: c.monitor.name } : null, admin: c.isAdmin, hasAdminCookie: !!ck[ADMIN_COOKIE] };
+      return { monitor: c.monitor ? { id: c.monitor.id, name: c.monitor.name, passwordChangeRequired: c.monitor.passwordChangeRequired } : null, admin: c.isAdmin, hasAdminCookie: !!ck[ADMIN_COOKIE] };
     },
   },
 
@@ -62,7 +76,7 @@ export const siteRoutes: Route[] = [
     method: "POST", path: "/register",
     handler: (c) => {
       const { v, errors } = validateProfile(c.body, { emailConfirm: true });
-      validatePassword(str(c.body.password), str(c.body.passwordConfirm), errors);
+      validatePassword(str(c.body.password), str(c.body.passwordConfirm), errors, { identifiers: [v.email] });
       const s = getStore();
       if (!errors.email && s.monitors.some((m) => m.email.toLowerCase() === v.email.toLowerCase() && m.status !== "退会")) errors.email = "このメールアドレスは既に登録されています。";
       if (c.body.agree !== true) errors.agree = "個人情報保護方針への同意が必要です。";
@@ -71,7 +85,7 @@ export const siteRoutes: Route[] = [
       const id = Math.max(...s.monitors.map((m) => m.id)) + 1;
       const token = newToken();
       const m: Monitor = {
-        ...v, id, passwordHash: hashPassword(str(c.body.password)), registeredAt: new Date().toISOString(), lastLoginAt: null, lastAnsweredAt: null,
+        ...v, id, passwordHash: hashPassword(str(c.body.password)), passwordChangeRequired: false, registeredAt: new Date().toISOString(), lastLoginAt: null, lastAnsweredAt: null,
         infoChangedAt: null, answerCount: 0, points: 0, exchangeCount: 0, exchangePointsTotal: 0, mailBounce: 0, status: "仮登録", remark: "", token,
       };
       s.monitors.push(m);
@@ -99,7 +113,7 @@ export const siteRoutes: Route[] = [
       const m = getStore().monitors.find((x) => x.email.toLowerCase() === str(c.body.email).toLowerCase() && x.status === "有効");
       let resetUrl: string | null = null;
       if (m) {
-        const t = makeResetToken(m.id, m.passwordHash);
+        const t = makeResetToken(m.id, passwordStamp(m.passwordHash));
         resetUrl = `${c.origin}/password-reset/${t}`;
         sendMail(m.email, "【Vinsight】パスワード再設定", "パスワード再設定メール", fillMonitorMail("passwordReset", m, { reset_url: resetUrl }));
       }
@@ -112,11 +126,11 @@ export const siteRoutes: Route[] = [
       const t = readResetToken(c.body.token);
       const m = t ? getStore().monitors.find((x) => x.id === t.id && x.status === "有効") : undefined;
       // パスワードを変更済みなら、同じURLは使えない（トークンに現在のパスワードの印が入っている）
-      if (!m || !t || m.passwordHash.slice(0, 16) !== t.pw) throw new ApiError(404, "再設定URLが無効、または有効期限が切れています。");
+      if (!m || !t || passwordStamp(m.passwordHash) !== t.pw) throw new ApiError(404, "再設定URLが無効、または有効期限が切れています。");
       const errors: Record<string, string> = {};
-      validatePassword(str(c.body.password), str(c.body.passwordConfirm), errors);
+      validatePassword(str(c.body.password), str(c.body.passwordConfirm), errors, { identifiers: monitorIdentifiers(m) });
       if (Object.keys(errors).length) throw new ApiError(422, "入力内容に誤りがあります。", errors);
-      m.passwordHash = hashPassword(str(c.body.password));
+      setMonitorPassword(m, str(c.body.password), "パスワード再設定メールから");
       return { ok: true };
     },
   },
@@ -230,10 +244,16 @@ export const siteRoutes: Route[] = [
       const { v, errors } = validateProfile(c.body, { emailConfirm: true });
       const s = getStore();
       if (!errors.email && s.monitors.some((x) => x.id !== m.id && x.email.toLowerCase() === v.email.toLowerCase() && x.status !== "退会")) errors.email = "このメールアドレスは既に登録されています。";
-      if (str(c.body.password)) validatePassword(str(c.body.password), str(c.body.passwordConfirm), errors);
+      const newPassword = str(c.body.password);
+      const current = str(c.body.currentPassword);
+      if (newPassword) validatePassword(newPassword, str(c.body.passwordConfirm), errors, { identifiers: monitorIdentifiers(m), current });
       if (Object.keys(errors).length) throw new ApiError(422, "入力内容に誤りがあります。", errors);
+      if (newPassword) assertCurrentPassword(m, current, clientIp(c.req));
       Object.assign(m, v, { infoChangedAt: new Date().toISOString() });
-      if (str(c.body.password)) m.passwordHash = hashPassword(str(c.body.password));
+      if (newPassword) {
+        setMonitorPassword(m, newPassword, "登録情報の変更画面から");
+        c.setCookie(MONITOR_COOKIE, createMonitorSession(m));
+      }
       return { ok: true };
     },
   },

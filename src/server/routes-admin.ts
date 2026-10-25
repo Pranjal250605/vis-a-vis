@@ -5,8 +5,11 @@ import {
   ADMIN_COOKIE, ApiError, Route, createSession, csvList, destroySession, file, num, order, parseCookies, parseCsv, sortBy, str, strArr, toCsv, toSafeMonitor, Handler,
 } from "./http";
 import {
-  ageOf, audit, fillTemplate, getStore, hashPassword, matchTarget, nextId, pointLots, resetStore, sendMail, summarizeTarget,
+  ageOf, audit, fillTemplate, getStore, matchTarget, nextId, pointLots, resetStore, sendMail, summarizeTarget,
 } from "./store";
+import { authenticateAdmin } from "./auth";
+import { checkPasswordPolicy, hashPassword } from "./security/passwords";
+import { clientIp } from "./security/request";
 import { validateProfile } from "./validate";
 import type { Monitor, News, Question, Survey, TargetFilter } from "@/lib/types";
 
@@ -163,8 +166,7 @@ export const adminRoutes: Route[] = [
   {
     method: "POST", path: "/admin/login",
     handler: (c) => {
-      const st = getStore().settings;
-      if (str(c.body.id) !== st.adminId || hashPassword(str(c.body.password)) !== st.adminPasswordHash) throw new ApiError(401, "IDまたはパスワードが正しくありません。");
+      authenticateAdmin(str(c.body.id), str(c.body.password), clientIp(c.req));
       c.setCookie(ADMIN_COOKIE, createSession({ kind: "admin" }));
       return { ok: true };
     },
@@ -552,7 +554,8 @@ export const adminRoutes: Route[] = [
     if (!emailOk(str(c.body.adminEmail))) errors.adminEmail = "管理者メールアドレス（テスト配信先）を正しく入力してください。";
     const months = Math.trunc(num(c.body.pointExpiryMonths, 0));
     if (months < 0 || months > 60) errors.pointExpiryMonths = "0〜60の数字で入力してください（0＝有効期限なし）。";
-    if (str(c.body.newPassword) && str(c.body.newPassword).length < 8) errors.newPassword = "パスワードは8文字以上で入力してください。";
+    const passwordProblem = str(c.body.newPassword) && checkPasswordPolicy(str(c.body.newPassword), { identifiers: [str(c.body.adminId)] });
+    if (passwordProblem) errors.newPassword = passwordProblem;
     if (Object.keys(errors).length) throw new ApiError(422, "入力内容に誤りがあります。", errors);
     st.adminId = str(c.body.adminId); st.fromAddress = str(c.body.fromAddress); st.toAddresses = tos.join(", "); st.adminEmail = str(c.body.adminEmail); st.pointExpiryMonths = months;
     if (str(c.body.newPassword)) st.adminPasswordHash = hashPassword(str(c.body.newPassword)); // ハッシュ化して保管（画面には表示しない）

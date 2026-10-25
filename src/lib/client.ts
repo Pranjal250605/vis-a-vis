@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export class ApiClientError extends Error {
-  constructor(public status: number, message: string, public fields: Record<string, string> = {}) {
+  constructor(public status: number, message: string, public fields: Record<string, string> = {}, public code?: string) {
     super(message);
   }
 }
@@ -17,7 +17,7 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   });
   let data: any = null;
   try { data = await res.json(); } catch { /* empty */ }
-  if (!res.ok) throw new ApiClientError(res.status, data?.error ?? "通信に失敗しました。", data?.fields ?? {});
+  if (!res.ok) throw new ApiClientError(res.status, data?.error ?? "通信に失敗しました。", data?.fields ?? {}, data?.code);
   return data as T;
 }
 
